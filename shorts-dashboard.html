@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>쇼핑쇼츠 컨트롤 — 상품 선정 대시보드</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --ink:#1c2333; --paper:#f7f5f0; --card:#ffffff;
+  --accent:#e8590c; --accent-soft:#fdf0e7;
+  --line:#e5e1d8; --muted:#8a8578; --ok:#1d9e75; --ok-soft:#e1f5ee;
+  --queue:#243b6b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--paper);color:var(--ink);min-height:100vh}
+
+header{background:var(--ink);color:#fff;padding:18px 28px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+header h1{font-size:19px;font-weight:700;letter-spacing:-0.02em}
+header h1 span{color:#f5a623}
+.file-zone{margin-left:auto;display:flex;gap:10px;align-items:center}
+.btn{border:none;border-radius:8px;padding:9px 16px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:filter .15s}
+.btn:hover{filter:brightness(1.08)}
+.btn-load{background:#f5a623;color:#3a2800}
+.btn-ghost{background:rgba(255,255,255,.12);color:#fff}
+
+.toolbar{padding:16px 28px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--line);background:var(--card)}
+.toolbar input[type=search]{flex:1;min-width:200px;padding:10px 14px;border:1.5px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit;background:var(--paper)}
+.toolbar input[type=search]:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+.chip{padding:7px 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-size:13px;font-weight:600;cursor:pointer;color:var(--muted)}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.count{font-size:13px;color:var(--muted);margin-left:auto}
+
+.empty{padding:90px 28px;text-align:center;color:var(--muted)}
+.empty b{display:block;font-size:17px;color:var(--ink);margin-bottom:8px}
+.empty code{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:2px 8px;font-size:13px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px;padding:22px 28px 120px}
+.pcard{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;transition:transform .15s, box-shadow .15s}
+.pcard:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(28,35,51,.10)}
+.pcard .imgbox{aspect-ratio:1;background:#fff;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--line);position:relative}
+.pcard img{width:100%;height:100%;object-fit:contain}
+.pcard .imgbox .noimg{color:var(--muted);font-size:13px}
+.rocket{position:absolute;top:10px;left:10px;background:var(--ok-soft);color:var(--ok);font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:6px}
+.rank{position:absolute;top:10px;right:10px;background:var(--ink);color:#f5a623;font-size:12px;font-weight:700;padding:4px 9px;border-radius:6px}
+.pbody{padding:14px;display:flex;flex-direction:column;gap:8px;flex:1}
+.pname{font-size:13.5px;font-weight:600;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:39px}
+.price{font-size:17px;font-weight:800;letter-spacing:-0.01em}
+.price small{font-size:12px;color:var(--muted);font-weight:500;margin-left:4px}
+.cat{font-size:11.5px;color:var(--muted)}
+.ai-note{background:var(--accent-soft);border-radius:8px;padding:10px;font-size:12.5px;line-height:1.55;color:#7a3d12;display:none}
+.ai-note.show{display:block}
+.ai-note b{display:block;font-size:11px;letter-spacing:.04em;color:var(--accent);margin-bottom:3px}
+.pactions{display:flex;gap:8px;margin-top:auto;padding-top:6px}
+.pactions .btn{flex:1;padding:9px 0;font-size:12.5px}
+.btn-link{background:var(--accent);color:#fff}
+.btn-q{background:var(--paper);color:var(--ink);border:1.5px solid var(--line)}
+.btn-q.inq{background:var(--queue);border-color:var(--queue);color:#fff}
+
+.queuebar{position:fixed;bottom:0;left:0;right:0;background:var(--queue);color:#fff;padding:14px 28px;display:none;align-items:center;gap:14px;box-shadow:0 -4px 20px rgba(0,0,0,.15)}
+.queuebar.show{display:flex}
+.queuebar b{font-size:14.5px}
+.queuebar .btn{background:#f5a623;color:#3a2800}
+.queuebar .hint{font-size:12.5px;opacity:.75}
+
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 22px;border-radius:999px;font-size:13.5px;font-weight:600;opacity:0;transition:opacity .25s;pointer-events:none;z-index:60}
+.toast.show{opacity:1}
+
+.overlay{position:fixed;inset:0;background:rgba(28,35,51,.55);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;z-index:50}
+.overlay.show{display:flex}
+.modal{background:var(--card);border-radius:16px;max-width:720px;width:100%;padding:26px;display:flex;flex-direction:column;gap:18px}
+.modal h2{font-size:17px;font-weight:700}
+.modal .pinfo{font-size:13.5px;color:var(--muted)}
+.story-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.story{border:1.5px solid var(--line);border-radius:10px;padding:13px;cursor:pointer;background:var(--paper)}
+.story:hover{border-color:var(--accent)}
+.story.sel{border-color:var(--accent);background:var(--accent-soft)}
+.story b{display:block;font-size:13.5px;margin-bottom:4px}
+.story small{font-size:11.5px;color:var(--muted);line-height:1.5;display:block}
+.story .flow{font-size:11px;color:var(--accent);margin-top:6px;font-weight:600}
+.keyrow{display:flex;gap:8px;align-items:center}
+.keyrow input{flex:1;padding:9px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit}
+.keyrow label{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.script-out{border-radius:10px;max-height:400px;overflow-y:auto;display:none;flex-direction:column;gap:10px}
+.script-out.show{display:flex}
+.len-row{display:flex;gap:7px;flex-wrap:wrap}
+.len{padding:8px 15px;border-radius:8px;border:1.5px solid var(--line);background:var(--paper);font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);font-family:inherit}
+.len.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.scn{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:13px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.scn .hd{grid-column:1/-1;display:flex;align-items:center;gap:8px}
+.scn .no{background:var(--ink);color:#f5a623;font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px}
+.scn .sec{font-size:11.5px;color:var(--muted)}
+.fld label{display:block;font-size:11px;font-weight:700;letter-spacing:.03em;margin-bottom:4px}
+.fld.nar label{color:var(--ok)}
+.fld.sub label{color:var(--accent)}
+.fld.vis label{color:var(--queue)}
+.fld textarea{width:100%;border:1px solid var(--line);border-radius:7px;padding:8px;font-size:12.5px;line-height:1.6;font-family:inherit;background:var(--card);resize:vertical;color:var(--ink)}
+.scn .nar{grid-column:1/-1}
+.hooks{display:none;flex-direction:column;gap:6px}
+.hooks.show{display:flex}
+.hook{display:flex;align-items:center;gap:10px;padding:10px 13px;border:1.5px solid var(--line);border-radius:9px;background:var(--paper);cursor:pointer;font-size:13.5px}
+.hook:hover{border-color:var(--accent)}
+.hook.sel{border-color:var(--accent);background:var(--accent-soft)}
+.hook .n{background:var(--ink);color:#f5a623;font-size:11px;font-weight:700;width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ch-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ch-grid .f label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.ch-grid .f input{width:100%;padding:8px 11px;border:1.5px solid var(--line);border-radius:7px;font-size:13px;font-family:inherit}
+.fact{display:none;flex-direction:column;gap:12px;background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:16px}
+.fact.show{display:flex}
+.fact-top{display:flex;align-items:center;gap:18px}
+.score{width:96px;height:96px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;color:#fff}
+.score b{font-size:30px;font-weight:700;line-height:1}
+.score small{font-size:10.5px;opacity:.85;margin-top:2px}
+.bars{flex:1;display:flex;flex-direction:column;gap:7px}
+.bar{display:flex;align-items:center;gap:9px;font-size:12px}
+.bar .lb{width:66px;color:var(--muted);font-weight:600;flex-shrink:0}
+.bar .tr{flex:1;height:7px;background:var(--line);border-radius:4px;overflow:hidden}
+.bar .fl{height:100%;background:var(--accent);border-radius:4px}
+.bar .vl{width:26px;text-align:right;font-weight:600}
+.issues{display:flex;flex-direction:column;gap:7px}
+.iss{display:flex;gap:9px;padding:10px 12px;border-radius:8px;font-size:12.5px;line-height:1.55;background:var(--card);border-left:3px solid var(--accent);border-radius:0 8px 8px 0}
+.iss.warn{border-left-color:#c62828}
+.iss b{flex-shrink:0;font-weight:700}
+.fact-sum{font-size:12.5px;line-height:1.65;color:var(--ink)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+.btn-gen{background:var(--accent);color:#fff}
+.btn-cancel{background:var(--paper);color:var(--ink);border:1.5px solid var(--line)}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.pcard{transition:none}.spin{animation-duration:1.5s}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>쇼핑쇼츠 <span>컨트롤</span></h1>
+  <div class="file-zone">
+    <button class="btn btn-ghost" onclick="loadSample()">샘플 데이터 보기</button>
+    <button class="btn btn-load" id="btn-coupang-fetch" onclick="fetchFromCoupangProxy()">쿠팡 상품 불러오기</button>
+    <button class="btn btn-load" onclick="document.getElementById('csvfile').click()">bestsellers.csv 불러오기</button>
+    <input type="file" id="csvfile" accept=".csv" hidden onchange="handleFile(this.files[0])">
+  </div>
+</header>
+
+<div class="toolbar" style="gap:8px">
+  <input type="text" id="proxyUrlInput" placeholder="Vercel 프록시 주소 (예: https://coupang-proxy.vercel.app/api/bestsellers)" style="flex:1;min-width:260px">
+</div>
+
+<div class="toolbar">
+  <input type="search" id="q" placeholder="상품명 검색" oninput="render()">
+  <div id="chips" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+  <span class="count" id="count"></span>
+</div>
+
+<div class="empty" id="empty">
+  <b>아직 상품 데이터가 없어</b>
+  위에 "쿠팡 상품 불러오기"로 바로 가져오거나(Vercel 프록시 주소 필요), <code>coupang_bestsellers.py</code> 실행해서 나온 <code>bestsellers.csv</code>를 불러오거나, 샘플 데이터로 화면부터 확인해봐.
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="queuebar" id="queuebar">
+  <b id="qcount">0개 담김</b>
+  <span class="hint">쇼츠로 만들 상품을 골라 담는 대기열이야 — 다음 단계에서 이 목록이 영상 생성 스크립트 입력이 됨</span>
+  <button class="btn" style="margin-left:auto" onclick="exportQueue()">대기열 내보내기 (JSON)</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h2>스토리 대본 생성</h2>
+    <div class="pinfo" id="modal-pinfo"></div>
+    <div class="keyrow">
+      <label for="gemkey">제미나이 API 키</label>
+      <input type="password" id="gemkey" placeholder="한 번 입력하면 이 브라우저에 저장돼요">
+    </div>
+    <div class="keyrow">
+      <label for="gemmodel">모델명 (에러 뜨면 여기서 교체)</label>
+      <input type="text" id="gemmodel" value="gemini-2.5-flash" placeholder="예: gemini-2.5-flash">
+    </div>
+    <div>
+      <div style="font-size:12.5px;font-weight:700;margin-bottom:7px">대본 길이</div>
+      <div class="len-row" id="len-row"></div>
+    </div>
+    <div style="font-size:12.5px;font-weight:700">스토리 유형</div>
+    <div class="story-grid" id="story-grid"></div>
+    <div id="post-gen" style="display:none;flex-direction:column;gap:14px">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="font-size:12.5px;font-weight:700">클릭을 부르는 제목 추천</div>
+          <button class="btn btn-cancel" style="padding:5px 11px;font-size:12px" onclick="suggestHooks()">제목 추천</button>
+        </div>
+        <div class="hooks" id="hooks"></div>
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="font-size:12.5px;font-weight:700">대본 신뢰도 검증</div>
+          <button class="btn btn-cancel" style="padding:5px 11px;font-size:12px" onclick="checkFacts()">검증하기</button>
+          <span style="font-size:11.5px;color:var(--muted)">상품 정보에 없는 내용·과장 표현을 잡아줘</span>
+        </div>
+        <div class="fact" id="fact"></div>
+      </div>
+      <div>
+        <div style="font-size:12.5px;font-weight:700;margin-bottom:8px">채널 정보 (영상 상단 표시)</div>
+        <div class="ch-grid">
+          <div class="f"><label>채널명</label><input id="ch-name" value="이야기 상점"></div>
+          <div class="f"><label>영상 제목</label><input id="ch-title"></div>
+          <div class="f"><label>작성자 표시</label><input id="ch-author" value="익명"></div>
+          <div class="f"><label>조회수 표시</label><input id="ch-views" value="17만"></div>
+          <div class="f"><label>좋아요 표시</label><input id="ch-likes" value="938"></div>
+          <div class="f"><label>템플릿</label><input id="ch-template" value="미니멀형"></div>
+        </div>
+      </div>
+    </div>
+    <div class="script-out" id="script-out"></div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal()">닫기</button>
+      <button class="btn btn-cancel" id="btn-save-scenes" style="display:none" onclick="saveScenes()">장면 JSON 저장</button>
+      <button class="btn btn-gen" id="btn-send-video" style="display:none" onclick="sendToVideoTool()">영상 만들기로 바로 이동 →</button>
+      <button class="btn btn-gen" id="btn-gen" onclick="generateScript()">스토리 대본 생성</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let products = [];
+let activeCat = '전체';
+let queue = new Set();
+
+const SAMPLE = [
+  {name:'누아트 날개없는 넥밴드 휴대용 선풍기 TYPE-C 3.0', price:'23900', img:'', link:'https://link.coupang.com/샘플1', cat:'가전디지털', rocket:'O'},
+  {name:'무선 휴대용 목걸이 선풍기 저소음 대용량', price:'18900', img:'', link:'https://link.coupang.com/샘플2', cat:'가전디지털', rocket:'O'},
+  {name:'스테인리스 디지털 주방저울 1kg', price:'6590', img:'', link:'https://link.coupang.com/샘플3', cat:'주방용품', rocket:'X'},
+  {name:'에너자이저 맥스 AA 건전지 12개입', price:'7000', img:'', link:'https://link.coupang.com/샘플4', cat:'생활용품', rocket:'O'},
+  {name:'쿨링 메모리폼 냉감 패드 침대 매트리스 커버', price:'23700', img:'', link:'https://link.coupang.com/샘플5', cat:'홈인테리어', rocket:'O'},
+  {name:'박스테이프 폭 48mm x 길이 40m 투명 6개', price:'1490', img:'', link:'https://link.coupang.com/샘플6', cat:'문구/오피스', rocket:'X'},
+];
+
+function parseCSV(text){
+  const rows=[]; let row=[], cur='', inQ=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(inQ){
+      if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else inQ=false; }
+      else cur+=c;
+    } else {
+      if(c==='"') inQ=true;
+      else if(c===','){row.push(cur);cur='';}
+      else if(c==='\n'||c==='\r'){ if(cur!==''||row.length){row.push(cur);rows.push(row);row=[];cur='';} if(c==='\r'&&text[i+1]==='\n')i++; }
+      else cur+=c;
+    }
+  }
+  if(cur!==''||row.length){row.push(cur);rows.push(row);}
+  return rows;
+}
+
+function handleFile(file){
+  if(!file) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    const rows=parseCSV(e.target.result);
+    const head=rows[0];
+    const idx={name:head.indexOf('상품명'),price:head.indexOf('가격'),img:head.indexOf('이미지URL'),link:head.indexOf('제휴링크'),cat:head.indexOf('카테고리'),rocket:head.indexOf('로켓배송')};
+    products=rows.slice(1).filter(r=>r.length>1).map(r=>({
+      name:r[idx.name]||'', price:r[idx.price]||'', img:r[idx.img]||'',
+      link:r[idx.link]||'', cat:r[idx.cat]||'기타', rocket:r[idx.rocket]||'X'
+    }));
+    afterLoad();
+    showToast(products.length+'개 상품 불러옴');
+  };
+  r.readAsText(file,'utf-8');
+}
+
+function loadSample(){ products=[...SAMPLE]; afterLoad(); showToast('샘플 데이터 로드됨'); }
+
+async function fetchFromCoupangProxy(){
+  const urlInput = document.getElementById('proxyUrlInput');
+  const url = urlInput.value.trim();
+  if(!url){ showToast('Vercel 프록시 주소를 먼저 입력해줘'); return; }
+  localStorage.setItem('coupang_proxy_url', url);
+
+  const btn = document.getElementById('btn-coupang-fetch');
+  const origText = btn.textContent;
+  btn.textContent = '불러오는 중...'; btn.disabled = true;
+  try{
+    const resp = await fetch(url);
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const json = await resp.json();
+    if(!json.products || !json.products.length){
+      showToast('상품을 못 가져왔어. 프록시 로그(errors) 확인해줘: ' + (json.errors||[]).join(', '));
+      return;
+    }
+    products = json.products;
+    afterLoad();
+    showToast(products.length + '개 상품 불러옴 (쿠팡파트너스 실시간)');
+    if(json.errors && json.errors.length){
+      console.warn('일부 카테고리 실패:', json.errors);
+    }
+  }catch(e){
+    showToast('불러오기 실패: ' + e.message);
+  }finally{
+    btn.textContent = origText; btn.disabled = false;
+  }
+}
+
+(function(){
+  const saved = localStorage.getItem('coupang_proxy_url');
+  if (saved) document.getElementById('proxyUrlInput').value = saved;
+  document.getElementById('proxyUrlInput').addEventListener('input', function(){
+    localStorage.setItem('coupang_proxy_url', this.value.trim());
+  });
+})();
+
+function afterLoad(){
+  activeCat='전체'; queue.clear();
+  document.getElementById('empty').style.display='none';
+  buildChips(); render(); updateQueueBar();
+}
+
+function buildChips(){
+  const cats=['전체',...new Set(products.map(p=>p.cat).filter(Boolean))];
+  document.getElementById('chips').innerHTML=cats.map(c=>
+    `<button class="chip ${c===activeCat?'on':''}" onclick="setCat('${c.replace(/'/g,"\\'")}')">${c}</button>`).join('');
+}
+function setCat(c){ activeCat=c; buildChips(); render(); }
+
+function fmt(n){ const v=parseInt(String(n).replace(/[^0-9]/g,'')); return isNaN(v)?n:v.toLocaleString('ko-KR'); }
+
+function render(){
+  const q=document.getElementById('q').value.trim().toLowerCase();
+  const list=products.filter(p=>(activeCat==='전체'||p.cat===activeCat)&&(!q||p.name.toLowerCase().includes(q)));
+  document.getElementById('count').textContent=list.length+'개 표시 중';
+  document.getElementById('grid').innerHTML=list.map((p,i)=>{
+    const id=products.indexOf(p);
+    const inq=queue.has(id);
+    return `<div class="pcard">
+      <div class="imgbox">
+        ${p.img?`<img src="${p.img}" alt="" loading="lazy" onerror="this.outerHTML='<span class=noimg>이미지 없음</span>'">`:'<span class="noimg">이미지 없음</span>'}
+        ${p.rocket==='O'?'<span class="rocket">로켓배송</span>':''}
+        <span class="rank">#${i+1}</span>
+      </div>
+      <div class="pbody">
+        <div class="pname">${p.name}</div>
+        <div class="price">${fmt(p.price)}<small>원</small></div>
+        <div class="cat">${p.cat}</div>
+        <div class="ai-note" id="ai-${id}"><b>AI 분석</b><span></span></div>
+        <div class="pactions">
+          <button class="btn btn-link" onclick="copyLink(${id})">링크 복사</button>
+          <button class="btn btn-q ${inq?'inq':''}" onclick="toggleQueue(${id})">${inq?'담김 ✓':'쇼츠 대기열'}</button>
+        </div>
+        <div class="pactions" style="padding-top:0">
+          <button class="btn btn-q" style="width:100%" onclick="openScriptModal(${id})">✍ 대본 생성</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function copyLink(id){
+  const p=products[id];
+  navigator.clipboard.writeText(p.link).then(()=>showToast('제휴링크 복사됨'))
+    .catch(()=>{ prompt('복사가 안 되면 직접 복사해:', p.link); });
+}
+
+function toggleQueue(id){
+  queue.has(id)?queue.delete(id):queue.add(id);
+  render(); updateQueueBar();
+}
+
+function updateQueueBar(){
+  const bar=document.getElementById('queuebar');
+  bar.classList.toggle('show',queue.size>0);
+  document.getElementById('qcount').textContent=queue.size+'개 담김';
+}
+
+function exportQueue(){
+  const data=[...queue].map(id=>products[id]);
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='shorts_queue.json';
+  a.click();
+  showToast('shorts_queue.json 저장됨 — 이게 영상 생성 입력 파일');
+}
+
+// ===== 스토리 대본 생성 =====
+const STORIES=[
+  {id:'compete', name:'경쟁박살형', desc:'기존 시장의 빈틈을 뒤집는 경쟁 서사', flow:'업계 비상 → 문제 → 등장 → 시장 반전'},
+  {id:'origin',  name:'탄생비화형', desc:'제품보다 만든 사람과 탄생 이유에 집중', flow:'문제 → 집착 → 실패 → 발견 → 제품'},
+  {id:'inventor',name:'발명가형', desc:'기발한 생각과 세상의 반응으로 호기심 유발', flow:'아이디어 → 비웃음 → 발명 → 입소문'},
+  {id:'unexpect',name:'의외의 활용형', desc:'예상 밖 사용법이 더 유명해지는 이야기', flow:'원래 용도 → 다른 사용법 → 확산 → 제품'},
+  {id:'truth',   name:'숨겨진 진실형', desc:'익숙한 것을 새롭게 보이게 만드는 반전', flow:'익숙함 → 단서 → 비밀 → 반전 → 재조명'},
+  {id:'heart',   name:'감동 실화형', desc:'포기 직전의 감정선을 해결로 연결', flow:'실패 → 포기 → 계기 → 도전 → 성공'},
+];
+const LENGTHS=[15,20,30,40,60];
+let modalProductId=null, selStory=null, selLen=30, scenes=[];
+
+function buildStoryGrid(){
+  document.getElementById('story-grid').innerHTML=STORIES.map(s=>
+    `<div class="story ${selStory===s.id?'sel':''}" onclick="selStory='${s.id}';buildStoryGrid()">
+      <b>${s.name}</b><small>${s.desc}</small><div class="flow">${s.flow}</div>
+    </div>`).join('');
+}
+
+function buildLenRow(){
+  document.getElementById('len-row').innerHTML=LENGTHS.map(l=>
+    `<button class="len ${selLen===l?'on':''}" onclick="selLen=${l};buildLenRow()">${l}초</button>`).join('');
+}
+
+function openScriptModal(id){
+  modalProductId=id; selStory=null; selLen=30; scenes=[];
+  const p=products[id];
+  document.getElementById('modal-pinfo').textContent=`${p.name} · ${fmt(p.price)}원 · ${p.cat}`;
+  document.getElementById('script-out').classList.remove('show');
+  document.getElementById('btn-save-scenes').style.display='none';
+  document.getElementById('btn-send-video').style.display='none';
+  document.getElementById('post-gen').style.display='none';
+  hooks=[]; selHook=-1;
+  document.getElementById('fact').classList.remove('show');
+  buildLenRow(); buildStoryGrid();
+  const savedKey = localStorage.getItem('gemini_api_key');
+  if (savedKey) document.getElementById('gemkey').value = savedKey;
+  const savedModel = localStorage.getItem('gemini_model');
+  if (savedModel) document.getElementById('gemmodel').value = savedModel;
+  document.getElementById('overlay').classList.add('show');
+}
+function closeModal(){ document.getElementById('overlay').classList.remove('show'); }
+
+function sceneCount(sec){ return Math.max(3, Math.round(sec/5)); }
+
+function buildPrompt(p, story, sec){
+  const s=STORIES.find(x=>x.id===story);
+  const n=sceneCount(sec);
+  return `너는 유튜브 쇼핑 쇼츠 전문 대본 작가야. 아래 상품으로 ${sec}초 분량의 "썰(스토리) 쇼핑 쇼츠" 대본을 한국어로 만들어줘.
+
+[상품 정보]
+상품명: ${p.name}
+가격: ${fmt(p.price)}원
+카테고리: ${p.cat}
+로켓배송: ${p.rocket==='O'?'가능':'불가'}
+
+[스토리 유형]
+${s.name} — ${s.desc}
+전개 구조: ${s.flow}
+
+[출력 형식]
+아래 JSON 배열 형식으로만 출력해. 설명, 인사말, 코드블록 표시(\`\`\`) 전부 없이 순수 JSON만.
+장면 개수는 정확히 ${n}개.
+
+[
+  {"narration":"TTS가 읽을 나레이션 한두 문장","subtitle":"화면에 박히는 짧은 자막 (10자 내외)","visual":"이 장면에 보여줄 화면 연출 설명"}
+]
+
+[작성 규칙]
+- 1번 장면은 3초 안에 시선을 잡는 강력한 후킹으로 시작
+- 전개 구조(${s.flow})를 순서대로 따라갈 것
+- 상품은 후반부에 해결책으로 자연스럽게 등장시킬 것
+- 마지막 장면은 "링크는 아래에" 류의 행동 유도
+- narration 전체 합계가 ${sec}초 낭독 분량 (한국어 기준 초당 약 5자)
+- 상품 정보에 없는 기능·효과·수치를 지어내지 말 것
+- 근거 없는 단정(최고, 1위, 유일, 부작용 없음)은 쓰지 말 것
+- 실제 있었던 사건이라고 단정하지 말 것`;
+}
+
+function stripFence(t){
+  return t.replace(/^\s*\`\`\`(?:json)?/i,'').replace(/\`\`\`\s*$/,'').trim();
+}
+
+function getGeminiModel(){
+  return (document.getElementById('gemmodel').value.trim()) || 'gemini-2.5-flash';
+}
+
+async function generateScript(){
+  const key=document.getElementById('gemkey').value.trim();
+  if(!key){ showToast('제미나이 API 키를 입력해줘'); return; }
+  if(!selStory){ showToast('스토리 유형을 먼저 골라줘'); return; }
+  const p=products[modalProductId];
+  const btn=document.getElementById('btn-gen');
+  btn.innerHTML='<span class="spin"></span>생성 중...'; btn.disabled=true;
+  try{
+    const resp=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(getGeminiModel())}:generateContent?key=${encodeURIComponent(key)}`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        contents:[{parts:[{text:buildPrompt(p,selStory,selLen)}]}],
+        generationConfig:{responseMimeType:"application/json"}
+      })
+    });
+    if(!resp.ok){
+      const err=await resp.json().catch(()=>({}));
+      throw new Error(err?.error?.message||('HTTP '+resp.status));
+    }
+    const data=await resp.json();
+    const raw=(data?.candidates?.[0]?.content?.parts||[]).map(x=>x.text||'').join('').trim();
+    if(!raw) throw new Error('응답이 비어있음');
+    let parsed;
+    try{ parsed=JSON.parse(stripFence(raw)); }
+    catch(e){ throw new Error('JSON 파싱 실패 — 다시 눌러봐'); }
+    if(!Array.isArray(parsed)) parsed=parsed.scenes||[];
+    scenes=parsed.map(s=>({
+      narration:s.narration||'', subtitle:s.subtitle||'', visual:s.visual||''
+    }));
+    renderScenes();
+    document.getElementById('btn-save-scenes').style.display='inline-block';
+    document.getElementById('btn-send-video').style.display='inline-block';
+    document.getElementById('post-gen').style.display='flex';
+    if(!document.getElementById('ch-title').value) document.getElementById('ch-title').value=scenes[0].subtitle||'';
+    showToast(scenes.length+'개 장면 생성 완료');
+  }catch(e){
+    showToast('생성 실패: '+e.message);
+  }finally{
+    btn.innerHTML='스토리 대본 생성'; btn.disabled=false;
+  }
+}
+
+function renderScenes(){
+  const per=(selLen/scenes.length).toFixed(1);
+  const out=document.getElementById('script-out');
+  out.innerHTML=scenes.map((s,i)=>`<div class="scn">
+    <div class="hd"><span class="no">SCENE ${i+1}</span><span class="sec">약 ${per}초</span></div>
+    <div class="fld nar"><label>장면 대본 · 나레이션</label>
+      <textarea rows="2" oninput="scenes[${i}].narration=this.value">${esc(s.narration)}</textarea></div>
+    <div class="fld sub"><label>화면 자막</label>
+      <textarea rows="2" oninput="scenes[${i}].subtitle=this.value">${esc(s.subtitle)}</textarea></div>
+    <div class="fld vis"><label>화면 연출</label>
+      <textarea rows="2" oninput="scenes[${i}].visual=this.value">${esc(s.visual)}</textarea></div>
+  </div>`).join('');
+  out.classList.add('show');
+}
+
+let hooks=[], selHook=-1;
+
+async function checkFacts(){
+  const key=document.getElementById('gemkey').value.trim();
+  if(!key){ showToast('제미나이 API 키를 입력해줘'); return; }
+  if(!scenes.length){ showToast('대본을 먼저 생성해줘'); return; }
+  const p=products[modalProductId];
+  const el=document.getElementById('fact');
+  el.innerHTML='<div style="font-size:13px;color:var(--muted)"><span class="spin" style="border-color:rgba(0,0,0,.15);border-top-color:var(--accent)"></span>대본을 검증하는 중...</div>';
+  el.classList.add('show');
+
+  const body=scenes.map((s,i)=>`${i+1}. ${s.narration}`).join('\n');
+  const prompt=`너는 광고 심의 검토자야. 아래 상품 정보만을 근거로 쇼츠 대본을 검증해줘.
+
+[확인된 상품 정보]
+상품명: ${p.name}
+가격: ${fmt(p.price)}원
+카테고리: ${p.cat}
+로켓배송: ${p.rocket==='O'?'가능':'불가'}
+(이 외의 정보는 확인된 바 없음)
+
+[검증할 대본]
+${body}
+
+[평가 항목] 각 0~100점
+- evidence: 대본 내용이 위 상품 정보로 뒷받침되는 정도
+- specificity: 지어낸 구체적 수치·효과가 없는 정도 (없을수록 높음)
+- exaggeration: 과장 광고 표현이 억제된 정도 (없을수록 높음)
+- claim: 근거 없는 단정(최고/1위/유일/부작용없음)이 없는 정도
+- authenticity: 허구를 실제 사건처럼 단정하지 않은 정도
+
+[문제 지적] 문제가 되는 문장을 최대 5개까지, 각각 어느 장면인지와 수정 제안 포함.
+level은 "warn"(반드시 고쳐야 함) 또는 "info"(권장) 중 하나.
+
+JSON으로만 출력:
+{"scores":{"evidence":0,"specificity":0,"exaggeration":0,"claim":0,"authenticity":0},
+ "summary":"한 문장 총평",
+ "issues":[{"scene":1,"level":"warn","text":"문제 문장","fix":"수정 제안"}]}`;
+
+  try{
+    const resp=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(getGeminiModel())}:generateContent?key=${encodeURIComponent(key)}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:"application/json"}})
+    });
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const data=await resp.json();
+    const obj=JSON.parse(stripFence((data?.candidates?.[0]?.content?.parts||[]).map(x=>x.text||'').join('')));
+    renderFact(obj);
+  }catch(e){
+    el.innerHTML=`<div style="font-size:13px;color:#c62828">검증 실패: ${esc(e.message)}</div>`;
+  }
+}
+
+const FACT_LABELS={evidence:'정보 근거',specificity:'구체성',exaggeration:'과장 억제',claim:'단정 회피',authenticity:'사실성'};
+
+function renderFact(o){
+  const sc=o.scores||{};
+  const keys=Object.keys(FACT_LABELS);
+  const vals=keys.map(k=>Number(sc[k])||0);
+  const total=Math.round(vals.reduce((a,b)=>a+b,0)/keys.length);
+  const color = total>=80 ? '#1d9e75' : total>=60 ? '#e8590c' : '#c62828';
+  const grade = total>=80 ? '근거 충분' : total>=60 ? '보완 권장' : '수정 필요';
+
+  const bars=keys.map((k,i)=>`<div class="bar">
+    <span class="lb">${FACT_LABELS[k]}</span>
+    <span class="tr"><span class="fl" style="width:${vals[i]}%;background:${color}"></span></span>
+    <span class="vl">${vals[i]}</span>
+  </div>`).join('');
+
+  const issues=(o.issues||[]).slice(0,5).map(it=>`<div class="iss ${it.level==='warn'?'warn':''}">
+    <b>SCENE ${it.scene||'-'}</b>
+    <span>${esc(it.text||'')}<br><span style="color:var(--muted)">→ ${esc(it.fix||'')}</span></span>
+  </div>`).join('') || '<div class="iss"><b>OK</b><span>지적된 문제가 없어.</span></div>';
+
+  document.getElementById('fact').innerHTML=`
+    <div class="fact-top">
+      <div class="score" style="background:${color}"><b>${total}</b><small>${grade}</small></div>
+      <div class="bars">${bars}</div>
+    </div>
+    <div class="fact-sum">${esc(o.summary||'')}</div>
+    <div class="issues">${issues}</div>`;
+}
+
+async function suggestHooks(){
+  const key=document.getElementById('gemkey').value.trim();
+  if(!key){ showToast('제미나이 API 키를 입력해줘'); return; }
+  if(!scenes.length){ showToast('대본을 먼저 생성해줘'); return; }
+  const p=products[modalProductId];
+  const body=scenes.map(s=>s.narration).join(' ');
+  const prompt=`아래는 유튜브 쇼핑 쇼츠 대본이야. 이 대본을 분석해서 클릭을 부르는 짧은 제목 6개를 추천해줘.
+
+상품: ${p.name}
+대본: ${body}
+
+규칙:
+- 각 제목은 20자 이내
+- 궁금증을 유발하되 낚시성 허위 표현은 금지
+- 근거 없는 단정(최고, 1위, 무조건)은 쓰지 말 것
+- JSON 배열로만 출력: ["제목1","제목2",...]`;
+  try{
+    const resp=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(getGeminiModel())}:generateContent?key=${encodeURIComponent(key)}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{responseMimeType:"application/json"}})
+    });
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const data=await resp.json();
+    const raw=(data?.candidates?.[0]?.content?.parts||[]).map(x=>x.text||'').join('').trim();
+    let arr=JSON.parse(stripFence(raw));
+    if(!Array.isArray(arr)) arr=arr.titles||[];
+    hooks=arr.slice(0,6); selHook=-1;
+    renderHooks();
+  }catch(e){ showToast('제목 추천 실패: '+e.message); }
+}
+
+function renderHooks(){
+  const el=document.getElementById('hooks');
+  el.innerHTML=hooks.map((h,i)=>
+    `<div class="hook ${selHook===i?'sel':''}" onclick="pickHook(${i})"><span class="n">${i+1}</span>${esc(h)}</div>`).join('');
+  el.classList.add('show');
+}
+function pickHook(i){
+  selHook=i;
+  document.getElementById('ch-title').value=hooks[i];
+  renderHooks();
+}
+
+function esc(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function buildScenePayload(){
+  const p=products[modalProductId];
+  const s=STORIES.find(x=>x.id===selStory);
+  return {
+    product:{name:p.name,price:p.price,image:p.img,link:p.link,category:p.cat},
+    story:s.name, length_sec:selLen,
+    channel:{
+      name:document.getElementById('ch-name').value,
+      title:document.getElementById('ch-title').value,
+      author:document.getElementById('ch-author').value,
+      views:document.getElementById('ch-views').value,
+      likes:document.getElementById('ch-likes').value,
+      template:document.getElementById('ch-template').value
+    },
+    scenes:scenes
+  };
+}
+
+function saveScenes(){
+  const payload=buildScenePayload();
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='scenes_'+Date.now()+'.json';
+  a.click();
+  showToast('장면 JSON 저장됨 — 영상 생성 입력 파일');
+}
+
+function sendToVideoTool(){
+  const payload=buildScenePayload();
+  localStorage.setItem('shorts_scene_transfer', JSON.stringify(payload));
+  try{
+    if (window.parent && window.parent !== window && window.parent.goToShortsTab) {
+      window.parent.goToShortsTab('video');
+      return;
+    }
+  }catch(e){}
+  // 허브 밖에서(파일 단독으로) 열었을 때는 그냥 페이지 이동
+  window.location.href = 'shorts-video.html';
+}
+
+let toastTimer;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+document.getElementById('gemkey').addEventListener('input', function(){
+  const v = this.value.trim();
+  if (v) localStorage.setItem('gemini_api_key', v);
+  else localStorage.removeItem('gemini_api_key');
+});
+
+document.getElementById('gemmodel').addEventListener('input', function(){
+  const v = this.value.trim();
+  if (v) localStorage.setItem('gemini_model', v);
+  else localStorage.removeItem('gemini_model');
+});
+</script>
+</body>
+</html>
